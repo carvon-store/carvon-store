@@ -277,6 +277,15 @@ async function submitOrder(){
   const orderId='#'+Math.floor(100000+Math.random()*900000);
   document.getElementById('order-id').textContent=orderId;
   if(window.Telegram?.WebApp){Telegram.WebApp.sendData(JSON.stringify({order_id:orderId,name,phone,address,payment,note,items,total:formatPrice(total)+" so'm"}));}
+  // Telegram ga xabar yuborish
+  const BOT_TOKEN = '7570067641:AAHIG4RXrdJhIIuSgkZmojBge4cI5q7TXN4';
+  const CHAT_ID = '1481352341';
+  const msg = `🛍️ YANGI BUYURTMA ${orderId}!\n\n👤 Mijoz: ${name}\n📞 Telefon: ${phone}\n📍 Manzil: ${address}\n💳 To'lov: ${payment}\n📦 Mahsulotlar: ${items}\n💰 Jami: ${formatPrice(total)} so'm\n📝 Izoh: ${note||'Yo\'q'}`;
+  fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({chat_id: CHAT_ID, text: msg})
+  }).catch(e => console.log('Telegram xato:', e));
   cart={};updateCartCount();showPage('success');
 }
 
@@ -290,5 +299,6 @@ init();
 </script>
 </body>
 </html>
+
 
 
