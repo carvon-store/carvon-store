@@ -284,9 +284,28 @@ function submitOrder(){
   const orderId='#'+Math.floor(100000+Math.random()*900000);
   document.getElementById('oid').textContent=orderId;
 
-  // Telegram xabar
+  // Telegram ga tugmali xabar
+  const chatId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '';
   const msg='🛍️ YANGI BUYURTMA '+orderId+'!\n\n👤 '+name+'\n📞 '+phone+'\n📍 '+address+'\n💳 '+payment+'\n📦 '+items+'\n💰 '+fmt(total)+' so\'m\n📝 '+(note||"Yo'q");
-  fetch('https://api.telegram.org/bot'+BOT_TOKEN+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:ADMIN_ID,text:msg})}).catch(()=>{});
+  
+  const keyboard = {
+    inline_keyboard: [
+      [
+        {text:'⚙️ Tayyorlanmoqda', callback_data:'s:'+orderId+':'+chatId+':preparing:'+name},
+        {text:'🚚 Yetkazilmoqda', callback_data:'s:'+orderId+':'+chatId+':delivering:'+name}
+      ],
+      [
+        {text:'✅ Yetkazildi', callback_data:'s:'+orderId+':'+chatId+':delivered:'+name},
+        {text:'❌ Bekor qilish', callback_data:'s:'+orderId+':'+chatId+':cancelled:'+name}
+      ]
+    ]
+  };
+  
+  fetch('https://api.telegram.org/bot'+BOT_TOKEN+'/sendMessage',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({chat_id:ADMIN_ID, text:msg, reply_markup:keyboard})
+  }).catch(()=>{});
 
   // Google Sheets
   const data={order_id:orderId,name:name,phone:phone,address:address,payment:payment,note:note,items:items,total:fmt(total)+" so'm",chat_id:(window.Telegram?.WebApp?.initDataUnsafe?.user?.id||'')};
