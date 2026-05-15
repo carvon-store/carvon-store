@@ -180,10 +180,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--black);color:var(--white)
   </div>
 </div>
 
+<!-- MY ORDERS PAGE -->
+<div class="page" id="page-myorders">
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">📋 Buyurtmalarim</div>
+      <button class="cart-btn" onclick="loadMyOrders()">🔄 Yangilash</button>
+    </div>
+  </div>
+  <div id="myorders-content" style="padding:16px">
+    <div style="text-align:center;padding:40px;color:var(--muted)">Yuklanmoqda...</div>
+  </div>
+</div>
+
 <div class="bnav">
   <button class="nbtn active" onclick="go('home');setNav(this)"><span class="nico">🏠</span><span>Bosh sahifa</span></button>
   <button class="nbtn" onclick="goCart();setNav(this)"><span class="nico">🛒</span><span>Savat</span></button>
   <button class="nbtn" onclick="go('order');updateTotal();setNav(this)"><span class="nico">📦</span><span>Buyurtma</span></button>
+  <button class="nbtn" onclick="loadMyOrders();go('myorders');setNav(this)"><span class="nico">📋</span><span>Buyurtmalarim</span></button>
 </div>
 
 <script>
@@ -312,6 +326,29 @@ function submitOrder(){
   const img=new Image();
   img.src=SHEET_URL+'?data='+encodeURIComponent(JSON.stringify(data));
 
+  // Supabase ga saqlash
+  fetch(SUPABASE_URL+'/rest/v1/orders', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'apikey':SUPABASE_KEY,
+      'Authorization':'Bearer '+SUPABASE_KEY,
+      'Prefer':'return=minimal'
+    },
+    body:JSON.stringify({
+      order_id:orderId,
+      name:name,
+      phone:phone,
+      address:address,
+      payment:payment,
+      items:items,
+      total:fmt(total)+" so'm",
+      note:note||'',
+      status:'🆕 Yangi',
+      chat_id:window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()||''
+    })
+  }).catch(e=>console.log('Supabase error:',e));
+
   cart={};updCC();go('success');
 }
 
@@ -320,6 +357,40 @@ function go(name){document.querySelectorAll('.page').forEach(p=>p.classList.remo
 function setNav(btn){document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
 function fmt(n){return n.toLocaleString('uz-UZ');}
+
+async function loadMyOrders(){
+  const c=document.getElementById('myorders-content');
+  c.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Yuklanmoqda...</div>';
+  const chatId=window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()||'';
+  if(!chatId){
+    c.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Buyurtmalarni ko\'rish uchun Telegram orqali kiring</div>';
+    return;
+  }
+  try{
+    const res=await fetch(SUPABASE_URL+'/rest/v1/orders?chat_id=eq.'+chatId+'&order=created_at.desc',{
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    const orders=await res.json();
+    if(!orders.length){
+      c.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px;margin-bottom:12px">📦</div><div style="font-size:16px;font-weight:600">Buyurtma yo\'q</div><div style="font-size:13px;margin-top:8px">Hali buyurtma bermagansiz</div></div>';
+      return;
+    }
+    const statusColors={'🆕 Yangi':'#FFF3CD','⚙️ Tayyorlanmoqda':'#CCE5FF','🚚 Yetkazilmoqda':'#D4EDDA','✅ Yetkazildi':'#D1ECF1','❌ Bekor qilindi':'#F8D7DA'};
+    const statusText={'🆕 Yangi':'#856404','⚙️ Tayyorlanmoqda':'#004085','🚚 Yetkazilmoqda':'#155724','✅ Yetkazildi':'#0C5460','❌ Bekor qilindi':'#721C24'};
+    c.innerHTML=orders.map(o=>`
+      <div style="background:var(--gray);border-radius:var(--r);padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-family:Syne,sans-serif;font-size:15px;font-weight:700">${o.order_id}</div>
+          <div style="background:${statusColors[o.status]||'#EEE'};color:${statusText[o.status]||'#333'};padding:4px 10px;border-radius:50px;font-size:12px;font-weight:600">${o.status}</div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:4px">📦 ${o.items}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--accent)">${o.total}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">${new Date(o.created_at).toLocaleString('uz-UZ')}</div>
+      </div>`).join('');
+  }catch(e){
+    c.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Xatolik yuz berdi</div>';
+  }
+}
 
 init();
 </script>
